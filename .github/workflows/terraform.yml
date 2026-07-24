@@ -120,8 +120,10 @@ jobs:
     name: "Deploy to Prod"
     needs: deploy-stage
     runs-on: ubuntu-latest
-    environment: prod # Configure "Required reviewers" in GitHub settings for this env
-    
+    environment: prod
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -131,10 +133,15 @@ jobs:
         with:
           terraform_version: "1.5.0"
 
-      - name: Terraform Init & Apply
-        run: |
-          cd environments/prod
-          terraform init
-          # terraform apply -auto-approve
-          terraform apply -input=false -auto-approve tfplan
-          
+      - name: Terraform Init
+        working-directory: environments/prod
+        run: terraform init -input=false
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: environments/prod
+        run: terraform plan -input=false -no-color -out=$GITHUB_WORKSPACE/tfplan
+
+      - name: Terraform Apply
+        working-directory: environments/prod
+        run: terraform apply -input=false -auto-approve $GITHUB_WORKSPACE/tfplan
