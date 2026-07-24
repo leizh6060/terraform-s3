@@ -1,0 +1,45 @@
+name: "Terraform Teardown (DESTROY)"
+
+on:
+  # Allows manual execution from the GitHub Actions tab
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Which environment do you want to DESTROY?'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - stage
+          - prod
+
+permissions:
+  contents: read
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: "us-east-1"
+
+jobs:
+  terraform-destroy:
+    name: "Destroy Infrastructure"
+    runs-on: ubuntu-latest
+    # Enforces your GitHub environment settings (like approvals) if targeting 'prod'
+    environment: ${{ github.event.inputs.target_env }}
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Terraform Init & Destroy
+        run: |
+          cd environments/${{ github.event.inputs.target_env }}
+          terraform init
+          terraform destroy -auto-approve
